@@ -20,8 +20,9 @@ class Document
                               "CourierNew" => {:normal => font_path + "cour.ttf"})
     @pdf.font "TimesNewRoman"
     p @pdf.font_size
+    p @content.class
     @content.to_pdf @pdf
-    p @pdf
+    #p @pdf
     @pdf.render_file "test.pdf"
   end
 end
@@ -102,18 +103,21 @@ class Tag
       #p child.text
       #puts "\n"
     end
-    @content.each do |item|
-      #item.gsub('\n', '')
-      #p item.class
-    end
-    #p @content
+    # @content.each do |item|
+      # #item.gsub('\n', '')
+      # #p item.class
+    # end
+    # #p @content
+    @content.reject! { |item| item == "\n" or item == "\n\n" }
   end
   
   def to_pdf prawn_object
+    #p @content.class
     @content.each do |item|
       if item.class == String
         render item, prawn_object
       else
+        #p item.class
         item.to_pdf prawn_object
       end
     end
@@ -153,8 +157,8 @@ class ATag < Tag
   end
   
   def render(string, prawn_object)
-    p 'self '
-    p string
+    #p 'self '
+    #p string
     #prawn_object.fill_color "189E18"
     prawn_object.formatted_text([{:text => string, :color => "189E18", :link => @attributes[:href]}])
     # @content.each do |item|
@@ -316,6 +320,15 @@ class TableTag < Tag
     get_attributes
     get_content
   end
+  
+  def to_pdf(prawn_object)
+    #p @content[0].class
+    #p @content.class
+    border ||= @attributes[:border]
+    p border
+    prawn_object.table @content.map { |item| item.render(prawn_object) },
+                       :cell_style => {:border_width => border.nil? ? 0 : border.to_i}
+  end
 end
 
 class TrTag < Tag
@@ -324,6 +337,15 @@ class TrTag < Tag
     get_attributes
     get_content
   end
+  
+  def render(prawn_object)
+    #rows = []
+    #p "predi"
+    @content.map { |item| item.render(prawn_object) }.flatten(1)
+    #p "tr:"
+    #p @content
+    #rows
+  end
 end
 
 class TdTag < Tag
@@ -331,6 +353,65 @@ class TdTag < Tag
     super(tag_tree)
     get_attributes
     get_content
+  end
+  
+  def render(prawn_object)
+    #p @content
+    @content.each do |item|
+      p item.class
+      unless item.class == String
+        item.to_pdf(prawn_object)
+      end
+    end
+  end
+end
+
+class UlTag < Tag
+  def initialize(tag_tree)
+    super
+    get_attributes
+    @attributes.merge!({:type => 'ul'})
+    get_content
+  end
+  
+  def to_pdf(prawn_object)
+    @content.map { |item| item.render(@attributes[:type], prawn_object) }
+  end
+end
+
+class OlTag < Tag
+  def initialize(tag_tree)
+    super
+    get_attributes
+    get_content
+  end
+  
+  def to_pdf(prawn_object)
+    @content.each_with_index { |item, index| item.render(index + 1, prawn_object) }
+  end
+end
+
+class LiTag < Tag
+  def initialize(tag_tree)
+    super
+    get_attributes
+    get_content
+  end
+  
+  def render_ul(prawn_object)
+    p @content[0].class
+    prawn_object.fill_circle [5, prawn_object.cursor], 2
+    prawn_object.text_box @content[0], :at => [12, prawn_object.cursor + 4]
+    prawn_object.move_down 15
+  end
+  
+  def render_ol(number, prawn_object)
+    prawn_object.text_box "#{number}. #{@content[0]}", :at => [12, prawn_object.cursor + 4]
+    prawn_object.move_down 15
+  end
+  
+  def render(type, prawn_object)
+    type == 'ul' ? render_ul(prawn_object) : render_ol(type, prawn_object)
   end
 end
 
@@ -344,7 +425,7 @@ end
 # HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <label>rgrgrgf</label></div> fghfh<div id="5">Hello</div> Text</a>'
 #Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <label>rgrgrgf</label></div> fghfh<h6>Здравей</h6> <br />Text</a>').to_pdf
 #Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <label>rgrgrgf</label></div> fghfh<code>Хей</code> <br />Text</a>').to_pdf
-Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q fghfh <img src="Google.jpg" alt="Това е Google" width="300" height="150" /> Text</a>').to_pdf
+#Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q fghfh <img src="Google.jpg" alt="Това е Google" width="300" height="150" /> Text</a>').to_pdf
 # HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <label>rgrgrgf</label></div> fghfh<div id="5">Hello</div> <br />Text</a>'
 # p HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q
 # <div>kdfgdf 
@@ -353,7 +434,7 @@ Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q f
 # HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <i>rgrgrgf</i></div> fghfh<div id="5">Hello</div> Text</a>'
 # HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <div>rgrgrgf</div></div> fghfh<div id="5">Hello</div> Text</a>'
 #HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Text</a>'
-# p HtmlTag.parse '<table border="1" cellpadding="1" cellspacing="1">
+# Document.new('<table border="1" cellpadding="1" cellspacing="1">
 # <tr style="font-weight: bold; color: white; text-align: center; background: grey">
 # <td>Катедра</td>
 # <td>Дисциплина</td>
@@ -425,9 +506,9 @@ Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q f
 # <td> </td>
 
 # </tr>
-# </table>'
+# </table>').to_pdf
 
-# p HtmlTag.parse '<table border="1">
+# Document.new('<table>
 # <tr>
 # <td>Клетка 1</td>
 # <td>Cell 2</td>
@@ -436,4 +517,9 @@ Document.new('<a href="test.com" id="new_a" class="test" target="_blank">Nov Q f
 # <td>2.1</td>
 # <td>2.2</td>
 # </tr>
-# </table>'
+# </table>').to_pdf
+
+Document.new('<ol><li class="action">Интерфейса и имплементация са две различни неща
+</li><li class="action">Хубаво е имплементацията да може да се променя независимо от интерфейсаХубаво е имплементацията да може да се променя независимо от интерфейса
+</li><li class="action">Хубаво е интерфейса да не показва твърде много от имплементацията
+</li><li class="action">Мислете за това като дизайнвате класове</li></ol>').to_pdf
