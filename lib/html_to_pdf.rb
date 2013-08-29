@@ -28,8 +28,8 @@ module HTMLToPDF
       name = @content.title
       p "name is #{name}"
       #p @pdf
-      #@pdf.render_file "#{name}.pdf"
-      @pdf.render_file "Test.pdf"
+      @pdf.render_file "#{name}.pdf"
+      #@pdf.render_file "Test.pdf"
     end
   end
 
@@ -96,7 +96,7 @@ module HTMLToPDF
       # tag
       #p @attributes
       @attributes.each_key do |key|
-        @attributes[key] = @tag_tree[key]
+        @attributes[key] ||= @tag_tree[key]     ### ||??
       end
     end
 
@@ -125,7 +125,7 @@ module HTMLToPDF
     end
 
     def title
-      self.class
+      self.class.to_s.match(/HTMLToPDF::(\w+)/)[1]
     end
 
     def to_pdf prawn_object
@@ -134,26 +134,27 @@ module HTMLToPDF
         if item.class == String
           render item, prawn_object
         else
-          p item
+          #p item
           item.to_pdf prawn_object
         end
       end
     end
 
     def to_s
-      @content.each { |object| object.to_s }
+      @content.map { |item| item.to_s }.join " "
     end
   end
 
   class HtmlTag < Tag
     def initialize(tag_tree)
-      super(tag_tree)
+      super
       get_content
       #to_pdf
     end
 
     def title
-      @tag_tree.css('title').text
+      title = @tag_tree.css('title').text
+      title.length == 0 ? super : title
     end
     # def to_pdf(pdf)
       # p @content
@@ -176,8 +177,8 @@ module HTMLToPDF
   end
 
   class ATag < Tag
-    def initialize(html)
-      super(html)
+    def initialize(tag_tree)
+      super
       @attributes.merge!({:href => nil, :target => nil})
       get_attributes
       get_content
@@ -197,6 +198,17 @@ module HTMLToPDF
         # end
       # end
       #pdf.render_file "testA.pdf"
+    end
+    
+    def to_s
+      str = ""
+      @content.each do |item|
+        # p item.class
+        str << (item.class == String ? "_#{item}_" : item.to_s)
+        #"_#{@content[0]}_"
+        #super
+      end
+      str
     end
 
     # def get_attributes
@@ -241,7 +253,6 @@ module HTMLToPDF
     end
 
     def render(string, prawn_object)
-      p string
       prawn_object.formatted_text([{:text => string}.merge(@attributes)])
     end
 
@@ -254,7 +265,7 @@ module HTMLToPDF
 
   class DivTag < TextTags
     def initialize(tag_tree)
-      super(tag_tree)
+      super
     end
 
     #def render(string, prawn_object)
@@ -273,13 +284,13 @@ module HTMLToPDF
 
   class PTag < TextTags
     def initialize(tag_tree)
-      super(tag_tree)
+      super
     end
   end
 
   class SpanTag < TextTags
     def initialize(tag_tree)
-      super(tag_tree)
+      super
     end
   end
 
@@ -302,7 +313,7 @@ module HTMLToPDF
                  when "u"
                    :underline
                end
-      p option
+      #p option
       super(tag_tree, {:style => option})
     end
   end
@@ -315,7 +326,7 @@ module HTMLToPDF
 
   class HrTag < Tag
     def initialize(tag_tree)
-      super(tag_tree)
+      super
     end
 
     def to_pdf(prawn_object)
@@ -324,13 +335,13 @@ module HTMLToPDF
     end
 
     def to_s
-      "-------------"
+      "--------------------------------------"
     end
   end
 
   class BrTag < Tag
     def initialize(tag_tree)
-      super(tag_tree)
+      super
     end
 
     def to_pdf(prawn_object)
@@ -338,7 +349,7 @@ module HTMLToPDF
     end
 
     def to_s
-      "             "
+      "\n"
     end
   end
 
@@ -347,11 +358,11 @@ module HTMLToPDF
       super
       @attributes.merge!({:alt => nil, :src => nil, :height => nil, :width => nil})
       get_attributes
-      p @attributes
+      #p @attributes
     end
 
     def to_pdf(prawn_object)
-      p @attributes
+      #p @attributes
       #if @attributes[:src] #when it is a URL and when is a file
       if (image = open @attributes[:src])
         prawn_object.image open(@attributes[:src]), @attributes
@@ -367,13 +378,13 @@ module HTMLToPDF
     end
 
     def to_s
-      @attributes[:alt].to_s
+      @attributes[:alt].nil? ? '' : @attributes[:alt].to_s
     end
   end
 
   class TableTag < Tag
     def initialize(tag_tree)
-      super(tag_tree)
+      super
       @attributes.merge!({:border => nil})
       get_attributes
       get_content
@@ -391,7 +402,7 @@ module HTMLToPDF
 
   class TrTag < Tag
     def initialize(tag_tree)
-      super(tag_tree)
+      super
       get_attributes
       get_content
     end
@@ -408,7 +419,7 @@ module HTMLToPDF
 
   class TdTag < Tag
     def initialize(tag_tree)
-      super(tag_tree)
+      super
       get_attributes
       get_content
     end
@@ -435,6 +446,10 @@ module HTMLToPDF
     def to_pdf(prawn_object)
       @content.map { |item| item.render(@attributes[:type], prawn_object) }
     end
+    
+    def to_s
+      @content.map { |item| item.to_s }.join "\n"
+    end
   end
 
   class OlTag < Tag
@@ -446,6 +461,10 @@ module HTMLToPDF
 
     def to_pdf(prawn_object)
       @content.each_with_index { |item, index| item.render(index + 1, prawn_object) }
+    end
+    
+    def to_s
+      @content.map { |item| item.to_s }.join "\n"
     end
   end
 
@@ -493,23 +512,28 @@ module HTMLToPDF
   class InputTag < Tag
     def initialize(tag_tree)
       super
-      @attributes.merge!({:checked => nil, :disabled => nil, :placeholder => nil, :type => tag_tree.name, :required => nil, :value => nil,})
+      @attributes.merge!({:name => tag_tree.name, :checked => nil, :disabled => nil, :placeholder => nil, :type => nil, :required => nil, :value => nil,})
+      #p @attributes
       get_attributes
+      p @attributes
       get_content
     end
 
     def render(prawn_object)
-      # if @attributes[:type].is_a? Array
-        # p 'y'
-      # end
-      p @attributes[:type].class, @attributes[:type]
+      #p @attributes[:type].class, @attributes[:type]
+      @attributes[:type] ||= if @attributes[:name] == 'button' or
+                              @attributes[:name] == 'textarea' or @attributes[:name] == 'select'
+                             @attributes[:name]
+                           end
+      p @attributes[:type]
       case @attributes[:type]
-        when 'button', 'submit', 'reset', ['Button']
+        when 'button', 'submit', 'reset'
           prawn_object.fill_color 'B1B1B1'
           prawn_object.fill_rounded_rectangle [0, prawn_object.cursor], 50, 20, 5
           prawn_object.fill_color '000000'
           if @attributes[:type] == 'button'
-            text = @tag_tree.child.nil? ? @attributes[:value] : @tag_tree.child[0].text
+            #p @tag_tree.child
+            text = @tag_tree.child.nil? ? @attributes[:value] : @tag_tree.child.text
           else
             text = @attributes[:value]
           end
@@ -533,23 +557,36 @@ module HTMLToPDF
           prawn_object.fill_and_stroke_rectangle [95, prawn_object.cursor], 15, 10
           prawn_object.fill_and_stroke_rectangle [95, prawn_object.cursor - 10], 15, 10
         when 'checkbox'
-          prawn_object.stroke_rectangle [0, prawn_object.cursor], 5, 5
+          prawn_object.stroke_rectangle [0, prawn_object.cursor - 3], 5, 5
           prawn_object.text_box @attributes[:value], :at => [10, prawn_object.cursor]
         when 'radio'
-          prawn_object.stroke_circle [0, prawn_object.cursor], 3
+          prawn_object.stroke_circle [2, prawn_object.cursor - 3], 3
           prawn_object.text_box @attributes[:value], :at => [10, prawn_object.cursor]
         when 'textarea'
-          prawn_object.stroke_rectangle [0, prawn_object.cursor], 110, 20
-          text = if @attributes[:value]
-                   @attributes[:value]
-                 elsif @attributes[:placeholder]
+          prawn_object.stroke_rectangle [0, prawn_object.cursor], 510, 60
+          text = if @attributes[:placeholder]
                    prawn_object.fill_color 'B1B1B1'
                    @attributes[:placeholder]
+                 elsif @tag_tree.child
+                   @tag_tree.child.text
+                 else
+                   ''
+                 end
+          prawn_object.text_box text, :at => [5, prawn_object.cursor - 5], :width => 508, :height => 58
+          prawn_object.move_down 60
+        when 'select'
+          prawn_object.stroke_rectangle [0, prawn_object.cursor], 110, 20
+          p @tag_tree.children[1].text
+          text = if @tag_tree.children[1].text
+                   @tag_tree.children[1].text
                  else
                    ''
                  end
           prawn_object.text_box text, :at => [5, prawn_object.cursor - 5], :width => 108, :height => 18
-      end
+          prawn_object.fill_color 'B1B1B1'
+          prawn_object.fill_and_stroke_rectangle [95, prawn_object.cursor], 15, 20
+          end
+      prawn_object.fill_color '000000'
     end
 
     def to_pdf(prawn_object)
@@ -580,6 +617,7 @@ end
 # HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <i>rgrgrgf</i></div> fghfh<div id="5">Hello</div> Text</a>'
 # HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Q<div>kdfgdf <div>rgrgrgf</div></div> fghfh<div id="5">Hello</div> Text</a>'
 #HtmlTag.parse '<a href="test.com" id="new_a" class="test" target="_blank">Nov Text</a>'
+HTMLToPDF::Document.new('<html><h1>H1</h1><h2>H2</h2><h3>H3</h3><h4>H4</h4><h5>H5</h5><h6>H6</h6></html>').to_pdf
 # Document.new('<table border="1" cellpadding="1" cellspacing="1">
 # <tr style="font-weight: bold; color: white; text-align: center; background: grey">
 # <td>РљР°С‚РµРґСЂР°</td>
@@ -1064,8 +1102,15 @@ end
 # </div>
 # </section></html>').to_pdf
 
-# Document.new('<html><input type="button" value="Mouse"/><input type="number" value="Mouse and other and other and other"/><input type="text" placeholder="Only mouse"/>
-# <input type="checkbox" value="First"/><input type="checkbox" value="Second"/><input type="radio" value="Third"/></html>').to_pdf
+# HTMLToPDF::Document.new('<html><input type="button" value="Mouse"/><input type="number" value="Mouse and other and other and other"/><input type="text" placeholder="Only mouse"/>
+# <input type="checkbox" value="First"/><input type="checkbox" value="Second"/><input type="radio" value="Third"/><button>New Button</button>
+# <textarea>Text in textarea</textarea>
+# <select>
+  # <option value="volvo">Volvo</option>
+  # <option value="saab">Saab</option>
+  # <option value="mercedes">Mercedes</option>
+  # <option value="audi">Audi</option>
+# </select></html>').to_pdf
 
 
 # HTMLToPDF::Document.new('<html>
@@ -1132,14 +1177,14 @@ end
 # <section>
 # <h2>Една форма:</h2>
 # <form action="demo_form.asp">
-# <input type="text" name="FirstName" placeholder="Mickey"><br />
-# <input type="button" value="Mouse"><br />
-# <input type="checkbox" value="First">First<br />
-# <input type="checkbox" value="Second">Second<br />
-# <input type="checkbox" value="Third">Third<br />
-# <input type="radio" value="First">First<br />
-# <input type="radio" value="Second">Second<br />
-# <input type="radio" value="Third">Third<br />
+# <input type="text" name="FirstName" placeholder="Mickey"/><br />
+# <input type="button" value="Mouse"/><br />
+# <input type="checkbox" value="First"/>First<br />
+# <input type="checkbox" value="Second"/>Second<br />
+# <input type="checkbox" value="Third"/>Third<br />
+# <input type="radio" value="First"/>First<br />
+# <input type="radio" value="Second"/>Second<br />
+# <input type="radio" value="Third"/>Third<br />
 # <select>
   # <option value="volvo">Volvo</option>
   # <option value="saab">Saab</option>
@@ -1150,8 +1195,8 @@ end
 # At w3schools.com you will learn how to make a website. We offer free tutorials in all web development technologies. 
 # </textarea><br />
 # <button type="button">Click Me!</button><br />
-# <input type="submit" value="Submit"><br />
-# <input type="reset" value="Mouse"><br />
+# <input type="submit" value="Submit"/><br />
+# <input type="reset" value="Mouse"/><br />
 # </form>
 # </section>
 # <section>
