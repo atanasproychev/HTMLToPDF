@@ -60,13 +60,13 @@ END
       document = Document.new
       assert_instance_of Document, Document.new
     end
-    
+
     def test_text_format_with_url
       document = Document.new
       expected = EXAMPLE_COM.gsub(/\n/, '')
       assert_equal expected, document.text_format('http://example.com')
     end
-    
+
     def test_text_format_with_html
       html = '<!doctype html>
               <html>
@@ -81,19 +81,19 @@ END
       expected = html.gsub(/\A<!.*?>/, '').gsub(/\n/, '')
       assert_equal expected, document.text_format(html)
     end
-    
-    def creating_document_with_url
+
+    def test_creating_document_with_url
       document = Document.new 'http://example.com'
       expected = EXAMPLE_COM.gsub(/\A<!.*?>/, '').gsub(/\n/, '')
-      assert_equal expected, document.html
+      assert_equal "<document>#{expected}</document>", document.html
     end
-    
-    def creating_document_with_html
+
+    def test_creating_document_with_html
       document = Document.new EXAMPLE_COM
       expected = EXAMPLE_COM.gsub(/\A<!.*?>/, '').gsub(/\n/, '')
-      assert_equal expected, document.html
+      assert_equal "<document>#{expected}</document>", document.html
     end
-    
+
     def text_getting_html_from_site
       document = Document.new
       expected = EXAMPLE_COM

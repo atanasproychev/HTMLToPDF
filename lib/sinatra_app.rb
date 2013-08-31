@@ -1,6 +1,6 @@
 # encoding: utf-8
 require 'sinatra'
-require './document'
+require_relative './document'
 
 get '/' do
   erb :index
