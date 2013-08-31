@@ -413,5 +413,48 @@ module HTMLToPDF
       expected = ['First']
       assert_equal expected, li_tag.content
     end
+    
+    def test_creating_an_input_tag_type_text
+      html = '<input type="text" placeholder="Type text" value="Mouse" />'
+      input_tag = Tag.parse html
+      assert_instance_of InputTag, input_tag
+    end
+    
+    def test_getting_attributes_from_input_tag
+      html = '<input type="text" placeholder="Type text" value="Mouse" />'
+      input_tag = Tag.parse html
+      expected = {:id => nil, :class => nil, :hidden => nil, :name => 'input', :placeholder => 'Type text', :value => 'Mouse', :type => 'text'}
+      assert_equal expected, input_tag.attributes
+    end
+    
+    def test_creating_an_input_tag_type_button
+      html = '<input type="button" value="Mouse" />'
+      input_tag = Tag.parse html
+      assert_instance_of InputTag, input_tag
+    end
+    
+    def test_creating_an_input_tag_button_tag
+      html = '<button>Mouse</button>'
+      input_tag = Tag.parse html
+      assert_instance_of InputTag, input_tag
+    end
+    
+    def test_creating_an_input_tag_select_tag
+      html = '<select><option value="First"></option></select>'
+      input_tag = Tag.parse html
+      assert_instance_of InputTag, input_tag
+    end
+    
+    def test_creating_an_input_tag_textarea_tag
+      html = '<textarea>Text in textarea</textarea>'
+      input_tag = Tag.parse html
+      assert_instance_of InputTag, input_tag
+    end
+    
+    def test_getting_content_from_textarea_input_tag
+      html = '<textarea>Text in textarea</textarea>'
+      input_tag = Tag.parse html
+      assert_equal ['Text in textarea'], input_tag.content
+    end
   end
 end

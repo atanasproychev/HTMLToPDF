@@ -15,12 +15,14 @@
 
     <div class="container">
 
-      <form class="form-signin" action="/" method="POST">
-        <h1 class="form-signin-heading">Преобразуване на HTML в PDF</h1>
+      <form class="form-transform" action="/" method="POST">
+        <h1 class="form-transform-heading">Преобразуване на HTML в PDF</h1>
         <textarea class="input-block-level" name="to_convert" placeholder="Въведете HTML код или URL, които да бъдат превърнати в PDF:"></textarea>
-        <button class="btn btn-large btn-primary" type="submit">Трансформирай</button>
+        <button class="btn btn-large btn-primary" type="submit" onclick="delete_value()">Трансформирай</button>
       </form>
 
     </div>
+	
+	<script src="js/functions.js"></script>
   </body>
 </html>
